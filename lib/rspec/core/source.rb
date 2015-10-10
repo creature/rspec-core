@@ -1,6 +1,3 @@
-RSpec::Support.require_rspec_core "source/node"
-RSpec::Support.require_rspec_core "source/token"
-
 module RSpec
   module Core
     # @private
@@ -25,6 +22,7 @@ module RSpec
       def ast
         @ast ||= begin
           require 'ripper'
+          RSpec::Support.require_rspec_core "source/node"
           sexp = Ripper.sexp(source)
           Node.new(sexp)
         end
@@ -33,6 +31,7 @@ module RSpec
       def tokens
         @tokens ||= begin
           require 'ripper'
+          RSpec::Support.require_rspec_core "source/token"
           tokens = Ripper.lex(source)
           Token.tokens_from_ripper_tokens(tokens)
         end
@@ -54,6 +53,17 @@ module RSpec
 
       def inspect
         "#<#{self.class} #{path}>"
+      end
+
+      # @private
+      class Cache
+        def initialize
+          @sources_by_path = {}
+        end
+
+        def source_from_file(path)
+          @sources_by_path[path] ||= Source.from_file(path)
+        end
       end
     end
   end
