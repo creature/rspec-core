@@ -12,7 +12,7 @@ module RSpec
           @exception               = exception
           @example                 = example
           @message_color           = options.fetch(:message_color)          { RSpec.configuration.failure_color }
-          @description             = options.fetch(:description_formatter)  { Proc.new { example.full_description } }.call(self)
+          @description             = options.fetch(:description)            { example.full_description }
           @detail_formatter        = options.fetch(:detail_formatter)       { Proc.new {} }
           @extra_detail_formatter  = options.fetch(:extra_detail_formatter) { Proc.new {} }
           @backtrace_formatter     = options.fetch(:backtrace_formatter)    { RSpec.configuration.backtrace_formatter }
@@ -87,10 +87,6 @@ module RSpec
           lines
         end
 
-        def failure_slash_error_line
-          @failure_slash_error_line ||= "Failure/Error: #{read_failed_line.strip}"
-        end
-
       private
 
         def final_exception(exception)
@@ -142,15 +138,20 @@ module RSpec
         end
 
         def failure_lines
-          @failure_lines ||= begin
-            lines = []
-            lines << failure_slash_error_line unless (description == failure_slash_error_line)
-            lines << "#{exception_class_name}:" unless exception_class_name =~ /RSpec/
-            encoded_string(exception.message.to_s).split("\n").each do |line|
-              lines << "  #{line}"
-            end
-            lines
+          @failure_lines ||= [failure_slash_error_line] + exception_lines
+        end
+
+        def failure_slash_error_line
+          "Failure/Error: #{read_failed_line.strip}"
+        end
+
+        def exception_lines
+          lines = []
+          lines << "#{exception_class_name}:" unless exception_class_name =~ /RSpec/
+          encoded_string(exception.message.to_s).split("\n").each do |line|
+            lines << "  #{line}"
           end
+          lines
         end
 
         def add_shared_group_lines(lines, colorizer)
@@ -230,9 +231,9 @@ module RSpec
           def pending_options
             if @execution_result.pending_fixed?
               {
-                :description_formatter => Proc.new { "#{@example.full_description} FIXED" },
-                :message_color         => RSpec.configuration.fixed_color,
-                :failure_lines         => [
+                :description   => "#{@example.full_description} FIXED",
+                :message_color => RSpec.configuration.fixed_color,
+                :failure_lines => [
                   "Expected pending '#{@execution_result.pending_message}' to fail. No Error was raised."
                 ]
               }
@@ -254,8 +255,6 @@ module RSpec
                                                                        options[:detail_formatter],
                                                                        options[:message_color])
             )
-
-            options[:description_formatter] &&= Proc.new {}
 
             return options unless exception.aggregation_metadata[:hide_backtrace]
             options[:backtrace_formatter] = EmptyBacktraceFormatter
@@ -294,7 +293,7 @@ module RSpec
               FlatMap.flat_map(exception.all_exceptions.each_with_index) do |failure, index|
                 options = with_multiple_error_options_as_needed(
                   failure,
-                  :description_formatter   => :failure_slash_error_line.to_proc,
+                  :description             => nil,
                   :indentation             => 0,
                   :message_color           => message_color || RSpec.configuration.failure_color,
                   :skip_shared_group_trace => true
