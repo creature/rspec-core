@@ -107,8 +107,8 @@ module RSpec::Core
 
       it 'allows a caller to specify extra details that are added to the bottom' do
         the_presenter = Formatters::ExceptionPresenter.new(
-          exception, example, :extra_detail_formatter => lambda do |failure_number, colorizer, indentation|
-            "#{indentation}extra detail for failure: #{failure_number}\n"
+          exception, example, :extra_detail_formatter => lambda do |failure_number, colorizer|
+            "extra detail for failure: #{failure_number}"
           end
         )
 
