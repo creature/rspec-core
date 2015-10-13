@@ -100,7 +100,11 @@ module RSpec
       #
       # @note Other scripts invoking `rspec` indirectly will ignore this
       #   setting.
-      add_setting :default_path
+      add_read_only_setting :default_path
+      def default_path=(path)
+        project_source_dirs << path
+        @default_path = path
+      end
 
       # @macro add_setting
       # Run examples over DRb (default: `false`). RSpec doesn't supply the DRb
@@ -242,6 +246,16 @@ module RSpec
       end
 
       # @macro add_setting
+      # Specifies which directories contain the source code for your project.
+      # When a failure occurs, RSpec looks through the backtrace to find a
+      # a line of source to print. It first looks for a line coming from
+      # one of the project source directories so that, for example, it prints
+      # the expectation or assertion call rather than the source code from
+      # the expectation or assertion framework.
+      # @return [Array<String>]
+      add_setting :project_source_dirs
+
+      # @macro add_setting
       # Report the times for the slowest examples (default: `false`).
       # Use this to specify the number of examples to include in the profile.
       add_setting :profile_examples
@@ -353,6 +367,7 @@ module RSpec
         @backtrace_formatter = BacktraceFormatter.new
 
         @default_path = 'spec'
+        @project_source_dirs = %w[ spec lib app ]
         @deprecation_stream = $stderr
         @output_stream = $stdout
         @reporter = nil
@@ -1272,6 +1287,15 @@ module RSpec
         RSpec::Core::RubyProject.add_to_load_path(*directories)
         paths.each { |path| require path }
         @requires += paths
+      end
+
+      # @private
+      def in_project_source_dir_regex
+        regexes = project_source_dirs.map do |dir|
+          /\A#{Regexp.escape(File.expand_path(dir))}\//
+        end
+
+        Regexp.union(regexes)
       end
 
       # @private

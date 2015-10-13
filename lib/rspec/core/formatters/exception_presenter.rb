@@ -165,11 +165,11 @@ module RSpec
         end
 
         def find_failed_line
-          example_path = example.metadata[:absolute_file_path].downcase
+          line_regex = RSpec.configuration.in_project_source_dir_regex
+
           exception_backtrace.find do |line|
-            next unless (line_path = line[/(.+?):(\d+)(|:\d+)/, 1])
-            File.expand_path(line_path).downcase == example_path
-          end
+            File.expand_path(line) =~ line_regex
+          end || exception_backtrace.first
         end
 
         def formatted_message_and_backtrace(colorizer, indentation)
